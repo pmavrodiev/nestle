@@ -1,0 +1,376 @@
+{
+  "paragraphs": [
+    {
+      "text": "%spark\n\nimport org.apache.spark._\nimport org.apache.spark.graphx._\nimport org.apache.spark.rdd.RDD\n/* spark context is in \u0027sc \u0027 */\n\n/* Create a Hive context for interaction with Hive via HiveQL */\n//var hiveContext \u003d new org.apache.spark.sql.hive.HiveContext(sc)\n\nvar sparkConf \u003d sc.getConf.getAll\n",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 7:30:48 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala",
+        "tableHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478688594580_-949696631",
+      "id": "20161109-114954_1956231180",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\nimport org.apache.spark._\n\nimport org.apache.spark.graphx._\n\nimport org.apache.spark.rdd.RDD\nsparkConf: Array[(String, String)] \u003d Array((spark.history.kerberos.keytab,none), (spark.eventLog.enabled,true), (master,yarn-client), (zeppelin.spark.concurrentSQL,false), (spark.yarn.containerLauncherMaxThreads,25), (spark.driver.extraLibraryPath,/usr/hdp/current/hadoop-client/lib/native:/usr/hdp/current/hadoop-client/lib/native/Linux-amd64-64), (spark.driver.host,10.38.228.200), (spark.executorEnv.PYTHONPATH,/usr/hdp/current/spark-client/python/lib/py4j-0.9-src.zip:/usr/hdp/current/spark-client/python/:/usr/hdp/current/spark-client/python:/usr/hdp/current/spark-client/python/lib/py4j-0.8.2.1-src.zip\u003cCPS\u003e{{PWD}}/pyspark.zip\u003cCPS\u003e{{PWD}}/py4j-0.9-src.zip), (spark.executor.extraLibraryPath,/usr/hdp/current/hadoop-client/lib/native:/usr/hdp/current/hadoop-client/lib/native/Linux-amd64-64),..."
+      },
+      "dateCreated": "Nov 9, 2016 11:49:54 AM",
+      "dateStarted": "Nov 9, 2016 7:30:48 PM",
+      "dateFinished": "Nov 9, 2016 7:31:06 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Define vertex types",
+      "text": "%spark\n\n/* Define the different types of vertices */\nclass VertexProperty(val propertyName: String, val id: Int) extends Serializable // base class\ncase class ReadNode(val name: String, val read_id: Int) extends VertexProperty(name, read_id) \ncase class ContigNode(val name: String, val contig_id: Int, val organism_id: Int) extends VertexProperty(name, contig_id) \ncase class OrganismNode(val name: String, val organism_id: Int) extends VertexProperty(name, organism_id) \n",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 7:30:51 PM",
+      "config": {
+        "colWidth": 6.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478688611909_862116588",
+      "id": "20161109-115011_894699029",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\ndefined class VertexProperty\n\ndefined class ReadNode\n\ndefined class ContigNode\n\ndefined class OrganismNode\n"
+      },
+      "dateCreated": "Nov 9, 2016 11:50:11 AM",
+      "dateStarted": "Nov 9, 2016 7:30:51 PM",
+      "dateFinished": "Nov 9, 2016 7:31:06 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Define edge types",
+      "text": "%spark\n\n/* Define the different types of edges */\nclass EdgeProperty(val _type: String) extends Serializable { // base class\n    def this() \u003d {this(\"none\")}\n}\n/*** read-to-contig edge between a ReadNode and a ContigNode ***/\n/*\n    pos:\n        The start position at which the read was matched to the contig\n    count:\n        The number of characters matched counting from the starting position\n    quality:\n        The quality of the match. DEFAULT \u003d 0\n    conf:\n        The confidence of the match. To be computed after the whole graph is contructed. \n        Every edge is created with default confidence of 1.0. DEFAULT \u003d 1.0\n*/\ncase class RCedge(val pos: Int, val count: Int \u003d 20, val quality: Double \u003d 0.0, \n                  val conf: Double \u003d 1.0) extends EdgeProperty(_type \u003d \"RCedge\")\n\n/*** read-to-read edge between 2 nodes of type ReadNode ***/\n/*\n    contig_node_id: \n        The node_id of the contig to which the 2 nodes (reads) are mapped\n    weight: \n        The closeness between the 2 nodes.  Can be quantified as a function of the positions to which the nodes map onto\n        the contig. For example: 1 / abs(pos2 - pos1)\n*/\ncase class RRedge(val contig_node_id: Long, weight: Double)  extends EdgeProperty(_type \u003d \"RRedge\")\n\n/*** contig-to-organism edge between a contig and an organism***/\n/* the mapping between contig and organism must be injective */\ncase class COedge(val edge_id: Int)  extends EdgeProperty(_type \u003d \"COedge\")",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 7:30:51 PM",
+      "config": {
+        "colWidth": 6.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478699382624_-535018651",
+      "id": "20161109-144942_1588913755",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\ndefined class EdgeProperty\n\ndefined class RCedge\n\ndefined class RRedge\n\ndefined class COedge\n"
+      },
+      "dateCreated": "Nov 9, 2016 2:49:42 PM",
+      "dateStarted": "Nov 9, 2016 7:31:06 PM",
+      "dateFinished": "Nov 9, 2016 7:31:07 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Initialize the nodes",
+      "text": "%spark\n\nval nodes: RDD[(Long, VertexProperty)] \u003d \n    sc.parallelize(Array((0L,  ReadNode(name \u003d \"read\", read_id \u003d 1)),\n                         (1L,  ReadNode(name \u003d \"read\", read_id \u003d 2)),\n                         (2L,  ReadNode(name \u003d \"read\", read_id \u003d 3)),\n                         (3L,  ReadNode(name \u003d \"read\", read_id \u003d 4)),\n                         (4L,  ReadNode(name \u003d \"read\", read_id \u003d 5)),\n                         (5L,  ReadNode(name \u003d \"read\", read_id \u003d 6)),\n                         (6L,  ReadNode(name \u003d \"read\", read_id \u003d 7)),\n                         (7L,  ContigNode(name \u003d \"contig\", contig_id \u003d 1, organism_id \u003d 1)),\n                         (8L,  ContigNode(name \u003d \"contig\", contig_id \u003d 2, organism_id \u003d 2)),\n                         (9L,  ContigNode(name \u003d \"contig\", contig_id \u003d 3, organism_id \u003d 2)),\n                         (10L, ContigNode(name \u003d \"contig\", contig_id \u003d 4, organism_id \u003d 3)),\n                         (11L, OrganismNode(name \u003d \"organism\", organism_id \u003d 1)),\n                         (12L, OrganismNode(name \u003d \"organism\", organism_id \u003d 2)),\n                         (13L, OrganismNode(name \u003d \"organism\", organism_id \u003d 3))\n    ))",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 7:31:48 PM",
+      "config": {
+        "colWidth": 6.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478690821287_1809356868",
+      "id": "20161109-122701_929294798",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\nnodes: org.apache.spark.rdd.RDD[(Long, VertexProperty)] \u003d ParallelCollectionRDD[0] at parallelize at \u003cconsole\u003e:44\n"
+      },
+      "dateCreated": "Nov 9, 2016 12:27:01 PM",
+      "dateStarted": "Nov 9, 2016 7:31:48 PM",
+      "dateFinished": "Nov 9, 2016 7:31:49 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Initialize the edges",
+      "text": "%spark\n\nval edges: RDD[Edge[EdgeProperty]]\u003d \n    sc.parallelize(Array(\n            /* contig-to-organism (CO) edges */\n             Edge(7L, 11L, (new COedge(edge_id \u003d 0)).asInstanceOf[EdgeProperty]),\n             Edge(8L, 12L, (new COedge(edge_id \u003d 1)).asInstanceOf[EdgeProperty]),\n             Edge(9L, 12L, (new COedge(edge_id \u003d 2)).asInstanceOf[EdgeProperty]),\n             Edge(10L, 13L,(new COedge(edge_id \u003d 3)).asInstanceOf[EdgeProperty]),\n            /* read-to-contig (RC) edges */\n             Edge(0L, 8L,  (new RCedge(pos \u003d 0)).asInstanceOf[EdgeProperty]),\n             Edge(1L, 8L,  (new RCedge(pos \u003d 1)).asInstanceOf[EdgeProperty]),\n             Edge(2L, 8L,  (new RCedge(pos \u003d 2)).asInstanceOf[EdgeProperty]),\n             Edge(2L, 7L,  (new RCedge(pos \u003d 2)).asInstanceOf[EdgeProperty]),\n             Edge(2L, 10L, (new RCedge(pos \u003d 2)).asInstanceOf[EdgeProperty]),\n             Edge(3L, 8L,  (new RCedge(pos \u003d 3)).asInstanceOf[EdgeProperty]),\n             Edge(3L, 9L,  (new RCedge(pos \u003d 3)).asInstanceOf[EdgeProperty]),\n             Edge(3L, 10L, (new RCedge(pos \u003d 4)).asInstanceOf[EdgeProperty]),\n             Edge(4L, 8L,  (new RCedge(pos \u003d 4)).asInstanceOf[EdgeProperty]),\n             Edge(5L, 8L,  (new RCedge(pos \u003d 5)).asInstanceOf[EdgeProperty]),\n             Edge(6L, 8L,  (new RCedge(pos \u003d 6)).asInstanceOf[EdgeProperty])\n    ))",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 7:31:50 PM",
+      "config": {
+        "colWidth": 6.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478701018132_-1305140929",
+      "id": "20161109-151658_1077425242",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\nedges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeProperty]] \u003d ParallelCollectionRDD[1] at parallelize at \u003cconsole\u003e:42\n"
+      },
+      "dateCreated": "Nov 9, 2016 3:16:58 PM",
+      "dateStarted": "Nov 9, 2016 7:31:50 PM",
+      "dateFinished": "Nov 9, 2016 7:31:50 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%spark\n// create a paired RDD\ndef constructRRedge(edge1: Edge[EdgeProperty], edge2: Edge[EdgeProperty]): Edge[EdgeProperty] \u003d {\n    val dest_1 \u003d edge1.dstId\n    val dest_2 \u003d edge2.dstId\n    // TODO check that dest_1 \u003d\u003d dest_2\n    val src_1 \u003d edge1.srcId\n    val src_2 \u003d edge2.srcId\n    val pos_1 \u003d edge1.attr.asInstanceOf[RCedge].pos\n    val pos_2 \u003d edge2.attr.asInstanceOf[RCedge].pos\n    val weight \u003d Math.abs(pos_1 - pos_2)\n    org.apache.spark.graphx.Edge(src_1, src_2, (new RRedge(contig_node_id \u003d dest_1, weight \u003d weight)).asInstanceOf[EdgeProperty])\n}\n",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 7:32:02 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478716015377_-890466900",
+      "id": "20161109-192655_51737905",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\nconstructRRedge: (edge1: org.apache.spark.graphx.Edge[EdgeProperty], edge2: org.apache.spark.graphx.Edge[EdgeProperty])org.apache.spark.graphx.Edge[EdgeProperty]\n"
+      },
+      "dateCreated": "Nov 9, 2016 7:26:55 PM",
+      "dateStarted": "Nov 9, 2016 7:32:02 PM",
+      "dateFinished": "Nov 9, 2016 7:32:02 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%spark\n\n\nval edges_paired \u003d edges\n                    .filter(e \u003d\u003e (e.attr).isInstanceOf[RCedge]) // Edge(4,8,RCedge(4,20,0.0,1.0)), Edge(5,8,RCedge(5,20,0.0,1.0))\n                    .map(e \u003d\u003e (e.dstId, e)) // 8 -\u003e Edge(4,8,RCedge(4,20,0.0,1.0)), 8 -\u003e Edge(5,8,RCedge(5,20,0.0,1.0))\n                    .reduceByKey( (x,y) \u003d\u003e  constructRRedge(x,y)) //constructRRedge(x,y)) // output a new edge org.apache.spark.graphx.Edge[EdgeProperty]\n                    \nedges_paired.collect()\n\n\n\n",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 7:32:04 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478710911923_-1540614800",
+      "id": "20161109-180151_2009481780",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "\nedges_paired: org.apache.spark.rdd.RDD[(org.apache.spark.graphx.VertexId, org.apache.spark.graphx.Edge[EdgeProperty])] \u003d ShuffledRDD[4] at reduceByKey at \u003cconsole\u003e:50\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\norg.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 0.0 failed 4 times, most recent failure: Lost task 1.3 in stage 0.0 (TID 6, hdpw2.nihs.ch.nestle.com): java.lang.ClassCastException: $iwC$$iwC$$iwC$$iwC$RRedge cannot be cast to $iwC$$iwC$$iwC$$iwC$RCedge\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC.constructRRedge(\u003cconsole\u003e:46)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$anonfun$3.apply(\u003cconsole\u003e:50)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$anonfun$3.apply(\u003cconsole\u003e:50)\n\tat org.apache.spark.util.collection.ExternalSorter$$anonfun$5.apply(ExternalSorter.scala:187)\n\tat org.apache.spark.util.collection.ExternalSorter$$anonfun$5.apply(ExternalSorter.scala:186)\n\tat org.apache.spark.util.collection.AppendOnlyMap.changeValue(AppendOnlyMap.scala:144)\n\tat org.apache.spark.util.collection.SizeTrackingAppendOnlyMap.changeValue(SizeTrackingAppendOnlyMap.scala:32)\n\tat org.apache.spark.util.collection.ExternalSorter.insertAll(ExternalSorter.scala:192)\n\tat org.apache.spark.shuffle.sort.SortShuffleWriter.write(SortShuffleWriter.scala:64)\n\tat org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:73)\n\tat org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:41)\n\tat org.apache.spark.scheduler.Task.run(Task.scala:89)\n\tat org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:227)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)\n\tat java.lang.Thread.run(Thread.java:745)\n\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1433)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1421)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1420)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:47)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1420)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:801)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:801)\n\tat scala.Option.foreach(Option.scala:236)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:801)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1642)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1601)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1590)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:622)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1856)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1869)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1882)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1953)\n\tat org.apache.spark.rdd.RDD$$anonfun$collect$1.apply(RDD.scala:934)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:150)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:111)\n\tat org.apache.spark.rdd.RDD.withScope(RDD.scala:323)\n\tat org.apache.spark.rdd.RDD.collect(RDD.scala:933)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:50)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:55)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:57)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:59)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:61)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:63)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:65)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:67)\n\tat $iwC$$iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:69)\n\tat $iwC$$iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:71)\n\tat $iwC$$iwC.\u003cinit\u003e(\u003cconsole\u003e:73)\n\tat $iwC.\u003cinit\u003e(\u003cconsole\u003e:75)\n\tat \u003cinit\u003e(\u003cconsole\u003e:77)\n\tat .\u003cinit\u003e(\u003cconsole\u003e:81)\n\tat .\u003cclinit\u003e(\u003cconsole\u003e)\n\tat .\u003cinit\u003e(\u003cconsole\u003e:7)\n\tat .\u003cclinit\u003e(\u003cconsole\u003e)\n\tat $print(\u003cconsole\u003e)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat org.apache.spark.repl.SparkIMain$ReadEvalPrint.call(SparkIMain.scala:1065)\n\tat org.apache.spark.repl.SparkIMain$Request.loadAndRun(SparkIMain.scala:1346)\n\tat org.apache.spark.repl.SparkIMain.loadAndRunReq$1(SparkIMain.scala:840)\n\tat org.apache.spark.repl.SparkIMain.interpret(SparkIMain.scala:871)\n\tat org.apache.spark.repl.SparkIMain.interpret(SparkIMain.scala:819)\n\tat sun.reflect.GeneratedMethodAccessor14.invoke(Unknown Source)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat org.apache.zeppelin.spark.Utils.invokeMethod(Utils.java:38)\n\tat org.apache.zeppelin.spark.SparkInterpreter.interpret(SparkInterpreter.java:941)\n\tat org.apache.zeppelin.spark.SparkInterpreter.interpretInput(SparkInterpreter.java:1153)\n\tat org.apache.zeppelin.spark.SparkInterpreter.interpret(SparkInterpreter.java:1099)\n\tat org.apache.zeppelin.spark.SparkInterpreter.interpret(SparkInterpreter.java:1092)\n\tat org.apache.zeppelin.interpreter.LazyOpenInterpreter.interpret(LazyOpenInterpreter.java:94)\n\tat org.apache.zeppelin.interpreter.remote.RemoteInterpreterServer$InterpretJob.jobRun(RemoteInterpreterServer.java:447)\n\tat org.apache.zeppelin.scheduler.Job.run(Job.java:176)\n\tat org.apache.zeppelin.scheduler.FIFOScheduler$1.run(FIFOScheduler.java:139)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)\n\tat java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)\n\tat java.lang.Thread.run(Thread.java:745)\nCaused by: java.lang.ClassCastException: $iwC$$iwC$$iwC$$iwC$RRedge cannot be cast to $iwC$$iwC$$iwC$$iwC$RCedge\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC.constructRRedge(\u003cconsole\u003e:46)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$anonfun$3.apply(\u003cconsole\u003e:50)\n\tat $iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$iwC$$anonfun$3.apply(\u003cconsole\u003e:50)\n\tat org.apache.spark.util.collection.ExternalSorter$$anonfun$5.apply(ExternalSorter.scala:187)\n\tat org.apache.spark.util.collection.ExternalSorter$$anonfun$5.apply(ExternalSorter.scala:186)\n\tat org.apache.spark.util.collection.AppendOnlyMap.changeValue(AppendOnlyMap.scala:144)\n\tat org.apache.spark.util.collection.SizeTrackingAppendOnlyMap.changeValue(SizeTrackingAppendOnlyMap.scala:32)\n\tat org.apache.spark.util.collection.ExternalSorter.insertAll(ExternalSorter.scala:192)\n\tat org.apache.spark.shuffle.sort.SortShuffleWriter.write(SortShuffleWriter.scala:64)\n\tat org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:73)\n\tat org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:41)\n\tat org.apache.spark.scheduler.Task.run(Task.scala:89)\n\tat org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:227)\n\t... 3 more\n\n"
+      },
+      "dateCreated": "Nov 9, 2016 6:01:51 PM",
+      "dateStarted": "Nov 9, 2016 7:32:04 PM",
+      "dateFinished": "Nov 9, 2016 7:32:05 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Initialize the graph",
+      "text": "%spark\n\nval graph \u003d Graph(nodes, edges)\n",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 5:09:43 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478702098542_-923518758",
+      "id": "20161109-153458_231906083",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\ngraph: org.apache.spark.graphx.Graph[VertexProperty,EdgeProperty] \u003d org.apache.spark.graphx.impl.GraphImpl@10796181\n"
+      },
+      "dateCreated": "Nov 9, 2016 3:34:58 PM",
+      "dateStarted": "Nov 9, 2016 5:09:43 PM",
+      "dateFinished": "Nov 9, 2016 5:09:43 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%spark\n\n/*\n\nval facts: RDD[String] \u003d \n    graph.triplets.map(triplet \u003d\u003e triplet.srcAttr.propertyName + \" \" + triplet.srcAttr.id + \" -\u003e \" + triplet.dstAttr.propertyName + \" \" + triplet.dstAttr.id + \" \" + triplet.attr)\nval bubu \u003d facts.collect().foreach(println(_))\n\n*/\n\nval read_to_contigs \u003d graph.edges.filter(e \u003d\u003e (e.attr).isInstanceOf[RCedge])\nread_to_contigs.collect()\n\n\n",
+      "user": "admin",
+      "dateUpdated": "Nov 9, 2016 5:14:04 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478702620082_-557302391",
+      "id": "20161109-154340_1088538662",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\nread_to_contigs: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeProperty]] \u003d MapPartitionsRDD[637] at filter at \u003cconsole\u003e:67\n\nres68: Array[org.apache.spark.graphx.Edge[EdgeProperty]] \u003d Array(Edge(0,8,RCedge(0,20,0.0,1.0)), Edge(1,8,RCedge(1,20,0.0,1.0)), Edge(2,8,RCedge(2,20,0.0,1.0)), Edge(2,7,RCedge(2,20,0.0,1.0)), Edge(2,10,RCedge(2,20,0.0,1.0)), Edge(3,8,RCedge(3,20,0.0,1.0)), Edge(3,9,RCedge(3,20,0.0,1.0)), Edge(3,10,RCedge(4,20,0.0,1.0)), Edge(4,8,RCedge(4,20,0.0,1.0)), Edge(5,8,RCedge(5,20,0.0,1.0)), Edge(6,8,RCedge(6,20,0.0,1.0)))\n"
+      },
+      "dateCreated": "Nov 9, 2016 3:43:40 PM",
+      "dateStarted": "Nov 9, 2016 5:14:04 PM",
+      "dateFinished": "Nov 9, 2016 5:14:04 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%spark\n",
+      "dateUpdated": "Nov 9, 2016 5:06:39 PM",
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478707599713_-1598711515",
+      "id": "20161109-170639_163072442",
+      "dateCreated": "Nov 9, 2016 5:06:39 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    }
+  ],
+  "name": "pavlin-Spark",
+  "id": "2C3DAA6KY",
+  "angularObjects": {
+    "2C2FVSTPQ:shared_process": [],
+    "2C28DETC2:shared_process": [],
+    "2C24RZY6N:shared_process": [],
+    "2BZ5WHQHY:shared_process": [],
+    "2C2XP7J9D:shared_process": [],
+    "2C1TJ69QM:shared_process": [],
+    "2BZCDVXQG:shared_process": [],
+    "2C16E3V6Y:shared_process": [],
+    "2C31ZM3HN:shared_process": [],
+    "2BYP3Q9VB:shared_process": [],
+    "2BZRZ4XD8:shared_process": [],
+    "2C28U48M2:shared_process": [],
+    "2BZ76V9TV:shared_process": [],
+    "2C2YR1C92:shared_process": [],
+    "2C3BAXZXW:shared_process": [],
+    "2C2DMU7N5:shared_process": [],
+    "2C2ZY9GQ2:shared_process": [],
+    "2BZ896HDX:shared_process": [],
+    "2BZZY31R4:shared_process": []
+  },
+  "config": {},
+  "info": {}
+}
