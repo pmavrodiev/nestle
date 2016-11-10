@@ -190,9 +190,9 @@
     },
     {
       "title": "Create RRedges from existing RCedges (helper function)",
-      "text": "%spark\n\n\n// create a paired RDD\n//(Edge(0,8,RCedge(0,20,0.0,1.0)),Edge(0,8,RCedge(0,20,0.0,1.0)))\ndef constructRRedge(edge1: Edge[EdgeBase], edge2: Edge[EdgeBase]) \u003d {\n    val src_1 \u003d edge1.srcId\n    val src_2 \u003d edge2.srcId\n    val dest_1 \u003d edge1.dstId\n    val dest_2 \u003d edge2.dstId\n    if ( dest_1 \u003d\u003d dest_2 \u0026\u0026 src_1 !\u003d src_2) {\n        // the two Reads have been mapped to the same Contig -\u003e create RRedge\n        val pos_1 \u003d edge1.attr.asInstanceOf[RCedge].pos\n        val pos_2 \u003d edge2.attr.asInstanceOf[RCedge].pos\n        val weight \u003d Math.abs(pos_1 - pos_2)\n        // this returns a key-\u003evalue pair\n        (if (src_1 \u003c src_2) (src_1, src_2) else (src_2, src_1), // simple key\n            Edge(src_1, src_2, // the value is an Edge of type RRedge\n             RRedge(contig_node_id \u003d dest_1, weight \u003d weight).asInstanceOf[EdgeBase]))\n    }\n    else null\n}\n",
+      "text": "%spark\n\ndef calculateWeight(edge1: Edge[EdgeBase], edge2: Edge[EdgeBase]): Double \u003d {\n    val pos_1 \u003d edge1.attr.asInstanceOf[RCedge].pos\n    val pos_2 \u003d edge2.attr.asInstanceOf[RCedge].pos\n    Math.abs(pos_1 - pos_2)\n}\n\n// create a paired RDD\n//(Edge(0,8,RCedge(0,20,0.0,1.0)),Edge(0,8,RCedge(0,20,0.0,1.0)))\ndef constructRRedge(edge1: Edge[EdgeBase], edge2: Edge[EdgeBase]) \u003d {\n    val src_1 \u003d edge1.srcId\n    val src_2 \u003d edge2.srcId\n    val dest_1 \u003d edge1.dstId\n    val dest_2 \u003d edge2.dstId\n    if ( dest_1 \u003d\u003d dest_2 \u0026\u0026 src_1 !\u003d src_2) {\n        // the two Reads have been mapped to the same Contig -\u003e create RRedge\n        val weight \u003d calculateWeight(edge1, edge2)\n        // this returns a key-\u003evalue pair\n        (if (src_1 \u003c src_2) (src_1, src_2) else (src_2, src_1), // simple key\n            Edge(src_1, src_2, // the value is an Edge of type RRedge\n             RRedge(contig_node_id \u003d dest_1, weight \u003d weight).asInstanceOf[EdgeBase]))\n    }\n    else null\n}\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 12:54:46 PM",
+      "dateUpdated": "Nov 10, 2016 1:17:27 PM",
       "config": {
         "colWidth": 6.0,
         "graph": {
@@ -218,19 +218,19 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nconstructRRedge: (edge1: org.apache.spark.graphx.Edge[EdgeBase], edge2: org.apache.spark.graphx.Edge[EdgeBase])((org.apache.spark.graphx.VertexId, org.apache.spark.graphx.VertexId), org.apache.spark.graphx.Edge[EdgeBase])\n"
+        "msg": "\ncalculateWeight: (edge1: org.apache.spark.graphx.Edge[EdgeBase], edge2: org.apache.spark.graphx.Edge[EdgeBase])Double\n\nconstructRRedge: (edge1: org.apache.spark.graphx.Edge[EdgeBase], edge2: org.apache.spark.graphx.Edge[EdgeBase])((org.apache.spark.graphx.VertexId, org.apache.spark.graphx.VertexId), org.apache.spark.graphx.Edge[EdgeBase])\n"
       },
       "dateCreated": "Nov 9, 2016 7:26:55 PM",
-      "dateStarted": "Nov 10, 2016 12:37:08 PM",
-      "dateFinished": "Nov 10, 2016 12:37:08 PM",
+      "dateStarted": "Nov 10, 2016 1:17:27 PM",
+      "dateFinished": "Nov 10, 2016 1:17:27 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
       "title": "Create RRedges from existing RCedges",
-      "text": "%spark\n\nRC_edges match {\n    case _: RDD[_] \u003d\u003e RC_edges.unpersist()\n}\n\n\nval RC_edges \u003d edges\n                .filter(e \u003d\u003e (e.attr).isInstanceOf[RCedge])\n\nval RR_edges \u003d RC_edges\n                .cartesian(RC_edges) // (Edge(0,8,RCedge(0,20,0.0,1.0)),Edge(1,8,RCedge(1,20,0.0,1.0)))\n                .map(x \u003d\u003e constructRRedge(x._1,  // Edge(0,8,RCedge(0,20,0.0,1.0))\n                                          x._2)) // Edge(1,8,RCedge(1,20,0.0,1.0))\n                .filter(x \u003d\u003e x !\u003d null) //remove everything that is not an RRedge\n                .reduceByKey( (x,y) \u003d\u003e \n                        if (x.srcId \u003c y.srcId) x\n                        else y) //((2,6),Edge(*6*,2,RRedge(8,4.0))) \u003d\u003e ((2,6),Edge(*2*,6,RRedge(8,4.0)))\n                .map(x \u003d\u003e x._2) //get only the values, i.e. the RR edges\n                \n                \nRR_edges.collect().foreach(println(_))\n\n\n",
+      "text": "%spark\n\nRC_edges match {\n    case _: RDD[_] \u003d\u003e RC_edges.unpersist()\n}\n\n\nval RC_edges \u003d edges\n                .filter(e \u003d\u003e (e.attr).isInstanceOf[RCedge])\n\nval RR_edges \u003d RC_edges\n                .cartesian(RC_edges) // (Edge(0,8,RCedge(0,20,0.0,1.0)),Edge(1,8,RCedge(1,20,0.0,1.0)))\n                .map(x \u003d\u003e constructRRedge(x._1,  // Edge(0,8,RCedge(0,20,0.0,1.0))\n                                          x._2)) // Edge(1,8,RCedge(1,20,0.0,1.0))\n                .filter(x \u003d\u003e x !\u003d null) //remove everything that is not an RRedge\n                .reduceByKey( (x,y) \u003d\u003e \n                        if (x.srcId \u003c y.srcId) x\n                        else y) //((2,6),Edge(*6*,2,RRedge(8,4.0))) \u003d\u003e ((2,6),Edge(*2*,6,RRedge(8,4.0)))\n                .map(x \u003d\u003e x._2) //drop the keys, get only the values, i.e. the RR edges\n                \n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 12:54:32 PM",
+      "dateUpdated": "Nov 10, 2016 1:17:35 PM",
       "config": {
         "colWidth": 6.0,
         "graph": {
@@ -256,19 +256,19 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nres300: RC_edges.type \u003d MapPartitionsRDD[284] at filter at \u003cconsole\u003e:58\n\nRC_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[289] at filter at \u003cconsole\u003e:58\n\nRR_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[294] at map at \u003cconsole\u003e:81\nEdge(2,6,RRedge(8,4.0))\nEdge(5,6,RRedge(8,1.0))\nEdge(0,5,RRedge(8,5.0))\nEdge(0,3,RRedge(8,3.0))\nEdge(0,4,RRedge(8,4.0))\nEdge(3,6,RRedge(8,3.0))\nEdge(1,6,RRedge(8,5.0))\nEdge(1,5,RRedge(8,4.0))\nEdge(3,4,RRedge(8,1.0))\nEdge(0,2,RRedge(8,2.0))\nEdge(1,4,RRedge(8,3.0))\nEdge(2,3,RRedge(10,2.0))\nEdge(0,6,RRedge(8,6.0))\nEdge(0,1,RRedge(8,1.0))\nEdge(1,2,RRedge(8,1.0))\nEdge(4,5,RRedge(8,1.0))\nEdge(3,5,RRedge(8,2.0))\nEdge(2,4,RRedge(8,2.0))\nEdge(4,6,RRedge(8,2.0))\nEdge(2,5,RRedge(8,3.0))\nEdge(1,3,RRedge(8,2.0))\n"
+        "msg": "\nres307: RC_edges.type \u003d MapPartitionsRDD[309] at filter at \u003cconsole\u003e:58\n\nRC_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[315] at filter at \u003cconsole\u003e:58\n\nRR_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[320] at map at \u003cconsole\u003e:75\n"
       },
       "dateCreated": "Nov 9, 2016 6:01:51 PM",
-      "dateStarted": "Nov 10, 2016 12:46:44 PM",
-      "dateFinished": "Nov 10, 2016 12:46:44 PM",
+      "dateStarted": "Nov 10, 2016 1:17:35 PM",
+      "dateFinished": "Nov 10, 2016 1:17:35 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
       "title": "Update the graph edges and initialize the actual graph",
-      "text": "%spark\n\nval graph \u003d Graph(nodes, edges.union(RR_edges))\n",
+      "text": "%spark\ngraph match {\n    case _: Graph[_,_] \u003d\u003e graph.unpersist()\n}\n\nval graph \u003d Graph(nodes, edges.union(RR_edges))\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 12:59:50 PM",
+      "dateUpdated": "Nov 10, 2016 1:18:14 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -294,18 +294,18 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\ngraph: org.apache.spark.graphx.Graph[VertexProperty,EdgeBase] \u003d org.apache.spark.graphx.impl.GraphImpl@43b5d4a1\n"
+        "msg": "\nres310: org.apache.spark.graphx.Graph[VertexProperty,EdgeBase] \u003d org.apache.spark.graphx.impl.GraphImpl@644d0aa1\n\ngraph: org.apache.spark.graphx.Graph[VertexProperty,EdgeBase] \u003d org.apache.spark.graphx.impl.GraphImpl@4c8293bb\n"
       },
       "dateCreated": "Nov 10, 2016 12:55:54 PM",
-      "dateStarted": "Nov 10, 2016 12:59:30 PM",
-      "dateFinished": "Nov 10, 2016 12:59:30 PM",
+      "dateStarted": "Nov 10, 2016 1:18:14 PM",
+      "dateFinished": "Nov 10, 2016 1:18:15 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
       "text": "%spark\n\nvar x \u003d edges.take(1)\nx(0).attr\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 9:31:33 AM",
+      "dateUpdated": "Nov 10, 2016 1:00:11 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -329,11 +329,11 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nx: Array[org.apache.spark.graphx.Edge[EdgeProperty]] \u003d Array(Edge(7,11,COedge(0)))\n\nres67: EdgeProperty \u003d COedge(0)\n"
+        "msg": "\nx: Array[org.apache.spark.graphx.Edge[EdgeBase]] \u003d Array(Edge(7,11,COedge(0)))\n\nres305: EdgeBase \u003d COedge(0)\n"
       },
       "dateCreated": "Nov 9, 2016 5:06:39 PM",
-      "dateStarted": "Nov 10, 2016 9:31:33 AM",
-      "dateFinished": "Nov 10, 2016 9:31:33 AM",
+      "dateStarted": "Nov 10, 2016 1:00:11 PM",
+      "dateFinished": "Nov 10, 2016 1:00:11 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
