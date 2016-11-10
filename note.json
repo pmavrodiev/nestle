@@ -38,6 +38,21 @@
       "progressUpdateIntervalMs": 500
     },
     {
+      "text": "%spark\n",
+      "dateUpdated": "Nov 10, 2016 3:33:29 PM",
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478788409568_-536431297",
+      "id": "20161110-153329_1884965847",
+      "dateCreated": "Nov 10, 2016 3:33:29 PM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    },
+    {
       "title": "Define vertex types",
       "text": "%spark\n\n/* Define the different types of vertices */\nclass VertexProperty(val propertyName: String, val id: Int) extends Serializable // base class\ncase class ReadNode(val name: String, val read_id: Int) extends VertexProperty(name, read_id) \ncase class ContigNode(val name: String, val contig_id: Int, val organism_id: Int) extends VertexProperty(name, contig_id) \ncase class OrganismNode(val name: String, val organism_id: Int) extends VertexProperty(name, organism_id) \n",
       "user": "admin",
@@ -154,7 +169,7 @@
       "title": "Initialize the edges",
       "text": "%spark\nedges match {\n    case _: RDD[_] \u003d\u003e edges.unpersist() \n}\n\nval edges: RDD[Edge[EdgeBase]]\u003d \n    sc.parallelize(Array(\n            /* contig-to-organism (CO) edges */\n             Edge(7L, 11L, COedge(edge_id \u003d 0).asInstanceOf[EdgeBase]),\n             Edge(8L, 12L, COedge(edge_id \u003d 1).asInstanceOf[EdgeBase]),\n             Edge(9L, 12L, COedge(edge_id \u003d 2).asInstanceOf[EdgeBase]),\n             Edge(10L, 13L,COedge(edge_id \u003d 3).asInstanceOf[EdgeBase]),\n            /* read-to-contig (RC) edges */\n             Edge(0L, 8L,  RCedge(pos \u003d 0).asInstanceOf[EdgeBase]),\n             Edge(1L, 8L,  RCedge(pos \u003d 1).asInstanceOf[EdgeBase]),\n             Edge(2L, 8L,  RCedge(pos \u003d 2).asInstanceOf[EdgeBase]),\n             Edge(2L, 7L,  RCedge(pos \u003d 2).asInstanceOf[EdgeBase]),\n             Edge(2L, 10L, RCedge(pos \u003d 2).asInstanceOf[EdgeBase]),\n             Edge(3L, 8L,  RCedge(pos \u003d 3).asInstanceOf[EdgeBase]),\n             Edge(3L, 9L,  RCedge(pos \u003d 3).asInstanceOf[EdgeBase]),\n             Edge(3L, 10L, RCedge(pos \u003d 4).asInstanceOf[EdgeBase]),\n             Edge(4L, 8L,  RCedge(pos \u003d 4).asInstanceOf[EdgeBase]),\n             Edge(5L, 8L,  RCedge(pos \u003d 5).asInstanceOf[EdgeBase]),\n             Edge(6L, 8L,  RCedge(pos \u003d 6).asInstanceOf[EdgeBase])\n    ))",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 12:06:19 PM",
+      "dateUpdated": "Nov 10, 2016 3:28:19 PM",
       "config": {
         "colWidth": 6.0,
         "graph": {
@@ -180,11 +195,11 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nres216: edges.type \u003d ParallelCollectionRDD[157] at parallelize at \u003cconsole\u003e:56\n\nedges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d ParallelCollectionRDD[159] at parallelize at \u003cconsole\u003e:56\n"
+        "msg": "\nres360: edges.type \u003d ParallelCollectionRDD[159] at parallelize at \u003cconsole\u003e:56\n\nedges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d ParallelCollectionRDD[378] at parallelize at \u003cconsole\u003e:56\n"
       },
       "dateCreated": "Nov 9, 2016 3:16:58 PM",
-      "dateStarted": "Nov 10, 2016 12:06:19 PM",
-      "dateFinished": "Nov 10, 2016 12:06:19 PM",
+      "dateStarted": "Nov 10, 2016 3:28:19 PM",
+      "dateFinished": "Nov 10, 2016 3:28:19 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
@@ -192,7 +207,7 @@
       "title": "Create RRedges from existing RCedges (helper function)",
       "text": "%spark\n\n/* Calculate similarity between 2 Reads that have been mapped to the same Contig\n   In principle, this similarity, or weight, can be a function of multiple factors,\n   e.g., the difference in the positions the reads have been mapped to, the quality/length of the match, etc.\n   \n   Here, we use only the absolute difference in positions.\n   */\ndef calculateWeight(edge1: Edge[EdgeBase], edge2: Edge[EdgeBase]): Double \u003d {\n    val pos_1 \u003d edge1.attr.asInstanceOf[RCedge].pos\n    val pos_2 \u003d edge2.attr.asInstanceOf[RCedge].pos\n    Math.abs(pos_1 - pos_2)\n}\n\n// create a paired RDD\n//(Edge(0,8,RCedge(0,20,0.0,1.0)),Edge(0,8,RCedge(0,20,0.0,1.0)))\ndef constructRRedge(edge1: Edge[EdgeBase], edge2: Edge[EdgeBase]) \u003d {\n    val src_1 \u003d edge1.srcId\n    val src_2 \u003d edge2.srcId\n    val dest_1 \u003d edge1.dstId\n    val dest_2 \u003d edge2.dstId\n    if ( dest_1 \u003d\u003d dest_2 \u0026\u0026 src_1 !\u003d src_2) {\n        // the two Reads have been mapped to the same Contig -\u003e create RRedge\n        val weight \u003d calculateWeight(edge1, edge2)\n        // this returns a key-\u003evalue pair\n        (if (src_1 \u003c src_2) (src_1, src_2) else (src_2, src_1), // simple key\n            Edge(src_1, src_2, // the value is an Edge of type RRedge\n             RRedge(contig_node_id \u003d dest_1, weight \u003d weight).asInstanceOf[EdgeBase]))\n    }\n    else null\n}\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 1:20:29 PM",
+      "dateUpdated": "Nov 10, 2016 3:28:22 PM",
       "config": {
         "colWidth": 6.0,
         "graph": {
@@ -221,16 +236,16 @@
         "msg": "\ncalculateWeight: (edge1: org.apache.spark.graphx.Edge[EdgeBase], edge2: org.apache.spark.graphx.Edge[EdgeBase])Double\n\nconstructRRedge: (edge1: org.apache.spark.graphx.Edge[EdgeBase], edge2: org.apache.spark.graphx.Edge[EdgeBase])((org.apache.spark.graphx.VertexId, org.apache.spark.graphx.VertexId), org.apache.spark.graphx.Edge[EdgeBase])\n"
       },
       "dateCreated": "Nov 9, 2016 7:26:55 PM",
-      "dateStarted": "Nov 10, 2016 1:17:27 PM",
-      "dateFinished": "Nov 10, 2016 1:17:27 PM",
+      "dateStarted": "Nov 10, 2016 3:28:22 PM",
+      "dateFinished": "Nov 10, 2016 3:28:22 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
       "title": "Create RRedges from existing RCedges",
-      "text": "%spark\n\nRC_edges match {\n    case _: RDD[_] \u003d\u003e RC_edges.unpersist()\n}\n\n\nval RC_edges \u003d edges\n                .filter(e \u003d\u003e (e.attr).isInstanceOf[RCedge])\n\nval RR_edges \u003d RC_edges\n                .cartesian(RC_edges) // (Edge(0,8,RCedge(0,20,0.0,1.0)),Edge(1,8,RCedge(1,20,0.0,1.0)))\n                .map(x \u003d\u003e constructRRedge(x._1,  // Edge(0,8,RCedge(0,20,0.0,1.0))\n                                          x._2)) // Edge(1,8,RCedge(1,20,0.0,1.0))\n                .filter(x \u003d\u003e x !\u003d null) //remove everything that is not an RRedge\n                //.reduceByKey( (x,y) \u003d\u003e \n                //        if (x.srcId \u003c y.srcId) x\n                //        else y) //((2,6),Edge(*6*,2,RRedge(8,4.0))) \u003d\u003e ((2,6),Edge(*2*,6,RRedge(8,4.0)))\n                .map(x \u003d\u003e x._2) //drop the keys, get only the values, i.e. the RR edges\n                \n                \n                \n                \n                \n                \n                \n                \n                \n                \n                \n                \n",
+      "text": "%spark\n\nRC_edges match {\n    case _: RDD[_] \u003d\u003e RC_edges.unpersist()\n}\n\n\nval RC_edges \u003d edges\n                .filter(e \u003d\u003e (e.attr).isInstanceOf[RCedge])\n\nval RR_edges \u003d RC_edges\n                .cartesian(RC_edges) // (Edge(0,8,RCedge(0,20,0.0,1.0)),Edge(1,8,RCedge(1,20,0.0,1.0)))\n                .map(x \u003d\u003e constructRRedge(x._1,  // Edge(0,8,RCedge(0,20,0.0,1.0))\n                                          x._2)) // Edge(1,8,RCedge(1,20,0.0,1.0))\n                .filter(x \u003d\u003e x !\u003d null) //remove everything that is not an RRedge\n                //.reduceByKey( (x,y) \u003d\u003e \n                //        if (x.srcId \u003c y.srcId) x\n                //        else y) //((2,6),Edge(*6*,2,RRedge(8,4.0))) \u003d\u003e ((2,6),Edge(*2*,6,RRedge(8,4.0)))\n                .map(x \u003d\u003e x._2) //drop the keys, get only the values, i.e. the RR edges\n                \n                \n                \n                \nRR_edges.collect().foreach(println(_))                \n                \n                \n                \n                \n                \n                \n                \n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 1:50:54 PM",
+      "dateUpdated": "Nov 10, 2016 3:28:24 PM",
       "config": {
         "colWidth": 6.0,
         "graph": {
@@ -256,11 +271,11 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nres317: RC_edges.type \u003d MapPartitionsRDD[315] at filter at \u003cconsole\u003e:58\n\nRC_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[350] at filter at \u003cconsole\u003e:58\n\nRR_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[354] at map at \u003cconsole\u003e:75\n"
+        "msg": "\nres362: RC_edges.type \u003d MapPartitionsRDD[373] at filter at \u003cconsole\u003e:58\n\nRC_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[379] at filter at \u003cconsole\u003e:58\n\nRR_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[383] at map at \u003cconsole\u003e:78\nEdge(0,1,RRedge(8,1.0))\nEdge(0,2,RRedge(8,2.0))\nEdge(1,0,RRedge(8,1.0))\nEdge(1,2,RRedge(8,1.0))\nEdge(2,0,RRedge(8,2.0))\nEdge(2,1,RRedge(8,1.0))\nEdge(0,3,RRedge(8,3.0))\nEdge(0,4,RRedge(8,4.0))\nEdge(0,5,RRedge(8,5.0))\nEdge(0,6,RRedge(8,6.0))\nEdge(1,3,RRedge(8,2.0))\nEdge(1,4,RRedge(8,3.0))\nEdge(1,5,RRedge(8,4.0))\nEdge(1,6,RRedge(8,5.0))\nEdge(2,3,RRedge(8,1.0))\nEdge(2,4,RRedge(8,2.0))\nEdge(2,5,RRedge(8,3.0))\nEdge(2,6,RRedge(8,4.0))\nEdge(3,0,RRedge(8,3.0))\nEdge(3,1,RRedge(8,2.0))\nEdge(3,2,RRedge(8,1.0))\nEdge(4,0,RRedge(8,4.0))\nEdge(4,1,RRedge(8,3.0))\nEdge(4,2,RRedge(8,2.0))\nEdge(5,0,RRedge(8,5.0))\nEdge(5,1,RRedge(8,4.0))\nEdge(5,2,RRedge(8,3.0))\nEdge(6,0,RRedge(8,6.0))\nEdge(6,1,RRedge(8,5.0))\nEdge(6,2,RRedge(8,4.0))\nEdge(2,3,RRedge(10,2.0))\nEdge(3,4,RRedge(8,1.0))\nEdge(3,5,RRedge(8,2.0))\nEdge(3,6,RRedge(8,3.0))\nEdge(3,2,RRedge(10,2.0))\nEdge(4,3,RRedge(8,1.0))\nEdge(4,5,RRedge(8,1.0))\nEdge(4,6,RRedge(8,2.0))\nEdge(5,3,RRedge(8,2.0))\nEdge(5,4,RRedge(8,1.0))\nEdge(5,6,RRedge(8,1.0))\nEdge(6,3,RRedge(8,3.0))\nEdge(6,4,RRedge(8,2.0))\nEdge(6,5,RRedge(8,1.0))\n"
       },
       "dateCreated": "Nov 9, 2016 6:01:51 PM",
-      "dateStarted": "Nov 10, 2016 1:50:54 PM",
-      "dateFinished": "Nov 10, 2016 1:50:54 PM",
+      "dateStarted": "Nov 10, 2016 3:28:24 PM",
+      "dateFinished": "Nov 10, 2016 3:28:28 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
@@ -268,7 +283,7 @@
       "title": "Update the graph edges and initialize the actual graph",
       "text": "%spark\ngraph match {\n    case _: Graph[_,_] \u003d\u003e graph.unpersist()\n}\n\n// first add the RR edges to the edge list of the graph \nval graph \u003d Graph(nodes, edges.union(RR_edges))\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 1:38:21 PM",
+      "dateUpdated": "Nov 10, 2016 3:28:33 PM",
       "config": {
         "colWidth": 6.0,
         "graph": {
@@ -294,11 +309,11 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nres310: org.apache.spark.graphx.Graph[VertexProperty,EdgeBase] \u003d org.apache.spark.graphx.impl.GraphImpl@644d0aa1\n\ngraph: org.apache.spark.graphx.Graph[VertexProperty,EdgeBase] \u003d org.apache.spark.graphx.impl.GraphImpl@4c8293bb\n"
+        "msg": "\nres364: org.apache.spark.graphx.Graph[VertexProperty,EdgeBase] \u003d org.apache.spark.graphx.impl.GraphImpl@4c8293bb\n\ngraph: org.apache.spark.graphx.Graph[VertexProperty,EdgeBase] \u003d org.apache.spark.graphx.impl.GraphImpl@7f2593ce\n"
       },
       "dateCreated": "Nov 10, 2016 12:55:54 PM",
-      "dateStarted": "Nov 10, 2016 1:18:14 PM",
-      "dateFinished": "Nov 10, 2016 1:18:15 PM",
+      "dateStarted": "Nov 10, 2016 3:28:33 PM",
+      "dateFinished": "Nov 10, 2016 3:28:34 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
@@ -306,7 +321,7 @@
       "title": "Define custom degree metric",
       "text": "%spark\n\ncase class CustomDegree(val contig_id: Int, val contig_node_id:Int, val degree: Double) extends Serializable\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 1:41:58 PM",
+      "dateUpdated": "Nov 10, 2016 3:28:37 PM",
       "config": {
         "colWidth": 6.0,
         "graph": {
@@ -335,15 +350,15 @@
         "msg": "\ndefined class CustomDegree\n"
       },
       "dateCreated": "Nov 10, 2016 1:38:44 PM",
-      "dateStarted": "Nov 10, 2016 1:41:58 PM",
-      "dateFinished": "Nov 10, 2016 1:41:58 PM",
+      "dateStarted": "Nov 10, 2016 3:28:37 PM",
+      "dateFinished": "Nov 10, 2016 3:28:37 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%spark\n\n// the map is contig_id:Int -\u003e  weighted degree:Double\nCustomDegree(val degree2contig : collection.mutable.Map[Int, Double]) extends Serializable\n    \nval weighted_degrees: VertexRDD[CustomDegree] \u003d graph.aggregateMessages[CustomDegree] {\n    triplet \u003d\u003e { // map function, triplet represents an EdgeContext[VD, ED, Msg], triplet.attr gives the edge attribute, i.e. EdgeBase\n        // srcAttr \u003d (Long, VertexProperty)\n        if (triplet.attr.isInstanceOf[RRedge]) {\n            // create message: send the id of the contig node, together with the weight of the RR link\n            msg \u003d collection.mutable.Map[Int, Double](triplet.attr.contig_node_id -\u003e triplet.attr.weight)\n            triplet.sendToDst(CustomDegree(msg))\n        }\n    },\n    (msg1, msg2) \u003d\u003e { //reduce function, takes 2 CustomDegree messages\n        \n    },\n    TripletFields.EdgeOnly // pass only the edge attributes to the EdgeContext in the mapper\n    \n}\n",
+      "text": "%spark\n\n// the map is contig_id:Long -\u003e  weighted degree:Double\ncase class CustomDegree(val degree2contig : collection.mutable.Map[Long, Double]) extends Serializable\n    \nval weighted_degrees: VertexRDD[CustomDegree] \u003d graph.aggregateMessages[CustomDegree] (\n    triplet \u003d\u003e { // map function, triplet represents an EdgeContext[VD, ED, Msg], triplet.attr gives the edge attribute, i.e. EdgeBase\n        // srcAttr \u003d (Long, VertexProperty)\n        if (triplet.attr.isInstanceOf[RRedge]) {\n            // create message: send the id of the contig node, together with the weight of the RR link\n            val theEdge \u003d triplet.attr.asInstanceOf[RRedge]\n            val msg \u003d collection.mutable.Map[Long, Double](theEdge.contig_node_id -\u003e theEdge.weight)\n            triplet.sendToDst(CustomDegree(msg))\n        }\n    },\n    (msg1, msg2) \u003d\u003e { //reduce function, takes 2 CustomDegree messages\n        val map1 : collection.mutable.Map[Long,Double] \u003d msg1.degree2contig\n        val map2 : collection.mutable.Map[Long,Double]\u003d msg2.degree2contig\n        map1.foreach( kv \u003d\u003e  map2(kv._1) \u003d map2.getOrElseUpdate(kv._1, 0) + kv._2)\n        CustomDegree(map2)\n    },\n    TripletFields.EdgeOnly // pass only the edge attributes to the EdgeContext in the mapper\n)\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 2:17:23 PM",
+      "dateUpdated": "Nov 10, 2016 3:28:39 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -367,18 +382,54 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\ngraph_RCedges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[349] at filter at \u003cconsole\u003e:81\nEdge(0,8,RCedge(0,20,0.0,1.0))\nEdge(1,8,RCedge(1,20,0.0,1.0))\nEdge(2,8,RCedge(2,20,0.0,1.0))\nEdge(2,7,RCedge(2,20,0.0,1.0))\nEdge(2,10,RCedge(2,20,0.0,1.0))\nEdge(3,8,RCedge(3,20,0.0,1.0))\nEdge(3,9,RCedge(3,20,0.0,1.0))\nEdge(3,10,RCedge(4,20,0.0,1.0))\nEdge(4,8,RCedge(4,20,0.0,1.0))\nEdge(5,8,RCedge(5,20,0.0,1.0))\nEdge(6,8,RCedge(6,20,0.0,1.0))\n"
+        "msg": "\ndefined class CustomDegree\n\nweighted_degrees: org.apache.spark.graphx.VertexRDD[CustomDegree] \u003d VertexRDDImpl[400] at RDD at VertexRDD.scala:57\n"
       },
       "dateCreated": "Nov 9, 2016 5:06:39 PM",
-      "dateStarted": "Nov 10, 2016 1:26:51 PM",
-      "dateFinished": "Nov 10, 2016 1:26:52 PM",
+      "dateStarted": "Nov 10, 2016 3:28:39 PM",
+      "dateFinished": "Nov 10, 2016 3:28:39 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%spark\n\nval m \u003d collection.mutable.Map[String, Int](\"a\" -\u003e 2)",
+      "text": "%spark\n\nweighted_degrees.collect().foreach(println(_))",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 2:08:53 PM",
+      "dateUpdated": "Nov 10, 2016 3:28:42 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478785437357_945822922",
+      "id": "20161110-144357_995099272",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "(4,CustomDegree(Map(8 -\u003e 13.0)))\n(0,CustomDegree(Map(8 -\u003e 21.0)))\n(6,CustomDegree(Map(8 -\u003e 21.0)))\n(2,CustomDegree(Map(8 -\u003e 13.0, 10 -\u003e 2.0)))\n(1,CustomDegree(Map(8 -\u003e 16.0)))\n(3,CustomDegree(Map(8 -\u003e 12.0, 10 -\u003e 2.0)))\n(5,CustomDegree(Map(8 -\u003e 16.0)))\n"
+      },
+      "dateCreated": "Nov 10, 2016 2:43:57 PM",
+      "dateStarted": "Nov 10, 2016 3:28:42 PM",
+      "dateFinished": "Nov 10, 2016 3:28:43 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%spark\n\nval m \u003d collection.mutable.Map[String, Int](\"a\" -\u003e 1)\nval m1 \u003d collection.mutable.Map[String, Int](\"a\" -\u003e 3, \"b\" -\u003e 1 )",
+      "user": "admin",
+      "dateUpdated": "Nov 10, 2016 2:43:15 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -402,18 +453,18 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nm: scala.collection.mutable.Map[String,Int] \u003d Map(a -\u003e 2)\n"
+        "msg": "\nm: scala.collection.mutable.Map[String,Int] \u003d Map(a -\u003e 1)\n\nm1: scala.collection.mutable.Map[String,Int] \u003d Map(b -\u003e 1, a -\u003e 3)\n"
       },
       "dateCreated": "Nov 10, 2016 9:05:16 AM",
-      "dateStarted": "Nov 10, 2016 2:08:53 PM",
-      "dateFinished": "Nov 10, 2016 2:08:53 PM",
+      "dateStarted": "Nov 10, 2016 2:43:15 PM",
+      "dateFinished": "Nov 10, 2016 2:43:15 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%spark\nm(\"b\") \u003d m.getOrElseUpdate(\"b\",0) + 1",
+      "text": "%spark\nval m3 \u003d m.foreach( kv \u003d\u003e  m1(kv._1) \u003d m1.getOrElseUpdate(kv._1, 0) + kv._2)\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 2:03:38 PM",
+      "dateUpdated": "Nov 10, 2016 2:43:17 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -437,18 +488,18 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": ""
+        "msg": "\nm3: Unit \u003d ()\n"
       },
       "dateCreated": "Nov 10, 2016 1:58:52 PM",
-      "dateStarted": "Nov 10, 2016 2:03:38 PM",
-      "dateFinished": "Nov 10, 2016 2:03:38 PM",
+      "dateStarted": "Nov 10, 2016 2:43:17 PM",
+      "dateFinished": "Nov 10, 2016 2:43:18 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%spark\nm",
+      "text": "%spark\nm3",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 2:03:42 PM",
+      "dateUpdated": "Nov 10, 2016 2:43:20 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -472,11 +523,11 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nres327: scala.collection.mutable.Map[String,Int] \u003d Map(b -\u003e 1, a -\u003e 22)\n"
+        "msg": ""
       },
       "dateCreated": "Nov 10, 2016 1:59:25 PM",
-      "dateStarted": "Nov 10, 2016 2:03:42 PM",
-      "dateFinished": "Nov 10, 2016 2:03:42 PM",
+      "dateStarted": "Nov 10, 2016 2:43:20 PM",
+      "dateFinished": "Nov 10, 2016 2:43:20 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
