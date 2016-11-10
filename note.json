@@ -265,42 +265,6 @@
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%spark\naccum.value",
-      "user": "admin",
-      "dateUpdated": "Nov 10, 2016 10:59:09 AM",
-      "config": {
-        "colWidth": 12.0,
-        "graph": {
-          "mode": "table",
-          "height": 300.0,
-          "optionOpen": false,
-          "keys": [],
-          "values": [],
-          "groups": [],
-          "scatter": {}
-        },
-        "enabled": true,
-        "editorMode": "ace/mode/scala"
-      },
-      "settings": {
-        "params": {},
-        "forms": {}
-      },
-      "apps": [],
-      "jobName": "paragraph_1478771921307_783044454",
-      "id": "20161110-105841_652206731",
-      "result": {
-        "code": "SUCCESS",
-        "type": "TEXT",
-        "msg": "\nres110: Int \u003d 7\n"
-      },
-      "dateCreated": "Nov 10, 2016 10:58:41 AM",
-      "dateStarted": "Nov 10, 2016 10:59:09 AM",
-      "dateFinished": "Nov 10, 2016 10:59:09 AM",
-      "status": "FINISHED",
-      "progressUpdateIntervalMs": 500
-    },
-    {
       "title": "Initialize the graph",
       "text": "%spark\n\nval graph \u003d Graph(nodes, edges)\n",
       "user": "admin",
