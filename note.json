@@ -265,10 +265,10 @@
       "progressUpdateIntervalMs": 500
     },
     {
-      "title": "Initialize the graph",
-      "text": "%spark\n\nval graph \u003d Graph(nodes, edges)\n",
+      "title": "Update the graph edges and initialize the actual graph",
+      "text": "%spark\n\nval graph \u003d Graph(nodes, edges.union(RR_edges))\n",
       "user": "admin",
-      "dateUpdated": "Nov 9, 2016 5:09:43 PM",
+      "dateUpdated": "Nov 10, 2016 12:59:50 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -281,6 +281,7 @@
           "scatter": {}
         },
         "enabled": true,
+        "editorMode": "ace/mode/scala",
         "title": true
       },
       "settings": {
@@ -288,51 +289,16 @@
         "forms": {}
       },
       "apps": [],
-      "jobName": "paragraph_1478702098542_-923518758",
-      "id": "20161109-153458_231906083",
+      "jobName": "paragraph_1478778954629_1742750694",
+      "id": "20161110-125554_1082661944",
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\ngraph: org.apache.spark.graphx.Graph[VertexProperty,EdgeProperty] \u003d org.apache.spark.graphx.impl.GraphImpl@10796181\n"
+        "msg": "\ngraph: org.apache.spark.graphx.Graph[VertexProperty,EdgeBase] \u003d org.apache.spark.graphx.impl.GraphImpl@43b5d4a1\n"
       },
-      "dateCreated": "Nov 9, 2016 3:34:58 PM",
-      "dateStarted": "Nov 9, 2016 5:09:43 PM",
-      "dateFinished": "Nov 9, 2016 5:09:43 PM",
-      "status": "FINISHED",
-      "progressUpdateIntervalMs": 500
-    },
-    {
-      "text": "%spark\n\n/*\n\nval facts: RDD[String] \u003d \n    graph.triplets.map(triplet \u003d\u003e triplet.srcAttr.propertyName + \" \" + triplet.srcAttr.id + \" -\u003e \" + triplet.dstAttr.propertyName + \" \" + triplet.dstAttr.id + \" \" + triplet.attr)\nval bubu \u003d facts.collect().foreach(println(_))\n\n*/\n\nval read_to_contigs \u003d graph.edges.filter(e \u003d\u003e (e.attr).isInstanceOf[RCedge])\nread_to_contigs.collect()\n\n\n",
-      "user": "admin",
-      "dateUpdated": "Nov 9, 2016 5:14:04 PM",
-      "config": {
-        "colWidth": 12.0,
-        "graph": {
-          "mode": "table",
-          "height": 300.0,
-          "optionOpen": false,
-          "keys": [],
-          "values": [],
-          "groups": [],
-          "scatter": {}
-        },
-        "enabled": true
-      },
-      "settings": {
-        "params": {},
-        "forms": {}
-      },
-      "apps": [],
-      "jobName": "paragraph_1478702620082_-557302391",
-      "id": "20161109-154340_1088538662",
-      "result": {
-        "code": "SUCCESS",
-        "type": "TEXT",
-        "msg": "\nread_to_contigs: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeProperty]] \u003d MapPartitionsRDD[637] at filter at \u003cconsole\u003e:67\n\nres68: Array[org.apache.spark.graphx.Edge[EdgeProperty]] \u003d Array(Edge(0,8,RCedge(0,20,0.0,1.0)), Edge(1,8,RCedge(1,20,0.0,1.0)), Edge(2,8,RCedge(2,20,0.0,1.0)), Edge(2,7,RCedge(2,20,0.0,1.0)), Edge(2,10,RCedge(2,20,0.0,1.0)), Edge(3,8,RCedge(3,20,0.0,1.0)), Edge(3,9,RCedge(3,20,0.0,1.0)), Edge(3,10,RCedge(4,20,0.0,1.0)), Edge(4,8,RCedge(4,20,0.0,1.0)), Edge(5,8,RCedge(5,20,0.0,1.0)), Edge(6,8,RCedge(6,20,0.0,1.0)))\n"
-      },
-      "dateCreated": "Nov 9, 2016 3:43:40 PM",
-      "dateStarted": "Nov 9, 2016 5:14:04 PM",
-      "dateFinished": "Nov 9, 2016 5:14:04 PM",
+      "dateCreated": "Nov 10, 2016 12:55:54 PM",
+      "dateStarted": "Nov 10, 2016 12:59:30 PM",
+      "dateFinished": "Nov 10, 2016 12:59:30 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
