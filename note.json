@@ -344,7 +344,7 @@
       "title": "Create RRedges from existing RCedges",
       "text": "%spark\n\nRC_edges match {\n    case _: RDD[_] \u003d\u003e RC_edges.unpersist()\n}\n\n\nval RC_edges \u003d edges\n                .filter(e \u003d\u003e (e.attr).isInstanceOf[RCedge])\n\nval RR_edges \u003d RC_edges\n                .cartesian(RC_edges) // (Edge(0,8,RCedge(0,20,0.0,1.0)),Edge(1,8,RCedge(1,20,0.0,1.0)))\n                .map(x \u003d\u003e constructRRedge(x._1,  // Edge(0,8,RCedge(0,20,0.0,1.0))\n                                          x._2)) // Edge(1,8,RCedge(1,20,0.0,1.0))\n                .filter(x \u003d\u003e x !\u003d null) //remove everything that is not an RRedge\n                //.reduceByKey( (x,y) \u003d\u003e \n                //        if (x.srcId \u003c y.srcId) x\n                //        else y) //((2,6),Edge(*6*,2,RRedge(8,4.0))) \u003d\u003e ((2,6),Edge(*2*,6,RRedge(8,4.0)))\n                .map(x \u003d\u003e x._2) //drop the keys, get only the values, i.e. the RR edges\n                \n                \n                \n                \n//RR_edges.collect().foreach(println(_))                \n                \n                \n                \n                \n                \n                \n                \n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 4:08:35 PM",
+      "dateUpdated": "Nov 10, 2016 4:34:14 PM",
       "config": {
         "colWidth": 6.0,
         "graph": {
@@ -370,11 +370,11 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\nres378: RC_edges.type \u003d MapPartitionsRDD[428] at filter at \u003cconsole\u003e:65\n\nRC_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[450] at filter at \u003cconsole\u003e:65\n\nRR_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[454] at map at \u003cconsole\u003e:85\n"
+        "msg": "\nres387: RC_edges.type \u003d MapPartitionsRDD[450] at filter at \u003cconsole\u003e:65\n\nRC_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[472] at filter at \u003cconsole\u003e:65\n\nRR_edges: org.apache.spark.rdd.RDD[org.apache.spark.graphx.Edge[EdgeBase]] \u003d MapPartitionsRDD[476] at map at \u003cconsole\u003e:85\n"
       },
       "dateCreated": "Nov 9, 2016 6:01:51 PM",
-      "dateStarted": "Nov 10, 2016 4:08:35 PM",
-      "dateFinished": "Nov 10, 2016 4:08:35 PM",
+      "dateStarted": "Nov 10, 2016 4:34:14 PM",
+      "dateFinished": "Nov 10, 2016 4:34:15 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
@@ -455,9 +455,9 @@
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%spark\n\n// the map is contig_id:Long -\u003e  weighted degree:Double\n// again contig_id is the node id of the ContigNode in the graph\n\ncase class CustomDegree(val degree2contig : collection.mutable.Map[Long, Double]) extends Serializable\n    \nval weighted_degrees: VertexRDD[CustomDegree] \u003d graph.aggregateMessages[CustomDegree] (\n    triplet \u003d\u003e { // map function, triplet represents an EdgeContext[VD, ED, Msg], triplet.attr gives the edge attribute, i.e. EdgeBase\n        // srcAttr \u003d (Long, VertexProperty)\n        if (triplet.attr.isInstanceOf[RRedge]) {\n            // create message: send the id of the contig node, together with the weight of the RR link\n            val theEdge \u003d triplet.attr.asInstanceOf[RRedge]\n            val msg \u003d collection.mutable.Map[Long, Double](theEdge.contig_node_id -\u003e theEdge.weight)\n            triplet.sendToDst(CustomDegree(msg))\n        }\n    },\n    (msg1, msg2) \u003d\u003e { //reduce function, takes 2 CustomDegree messages\n        val map1 : collection.mutable.Map[Long,Double] \u003d msg1.degree2contig\n        val map2 : collection.mutable.Map[Long,Double]\u003d msg2.degree2contig\n        map1.foreach( kv \u003d\u003e  map2(kv._1) \u003d map2.getOrElseUpdate(kv._1, 0) + kv._2)\n        CustomDegree(map2)\n    },\n    TripletFields.EdgeOnly // pass only the edge attributes to the EdgeContext in the mapper\n)\n",
+      "text": "%spark\n\n\n// the map is contig_id:Long -\u003e  weighted degree:Double\n// again contig_id is the node id of the ContigNode in the graph\n\ncase class CustomDegree(val degree2contig : collection.mutable.Map[Long, Double]) extends Serializable\n    \nval readNodes_weighted_degrees: VertexRDD[CustomDegree] \u003d graph.aggregateMessages[CustomDegree] (\n    triplet \u003d\u003e { // map function, triplet represents an EdgeContext[VD, ED, Msg], triplet.attr gives the edge attribute, i.e. EdgeBase\n        // srcAttr \u003d (Long, VertexProperty)\n        if (triplet.attr.isInstanceOf[RRedge]) {\n            // create message: send the id of the contig node, together with the weight of the RR link\n            val theEdge \u003d triplet.attr.asInstanceOf[RRedge]\n            val msg \u003d collection.mutable.Map[Long, Double](theEdge.contig_node_id -\u003e theEdge.weight)\n            triplet.sendToDst(CustomDegree(msg))\n        }\n    },\n    (msg1, msg2) \u003d\u003e { //reduce function, takes 2 CustomDegree messages\n        val map1 : collection.mutable.Map[Long,Double] \u003d msg1.degree2contig\n        val map2 : collection.mutable.Map[Long,Double]\u003d msg2.degree2contig\n        map1.foreach( kv \u003d\u003e  map2(kv._1) \u003d map2.getOrElseUpdate(kv._1, 0) + kv._2)\n        CustomDegree(map2)\n    },\n    TripletFields.EdgeOnly // pass only the edge attributes to the EdgeContext in the mapper\n)\n",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 4:08:39 PM",
+      "dateUpdated": "Nov 10, 2016 4:34:50 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -481,18 +481,18 @@
       "result": {
         "code": "SUCCESS",
         "type": "TEXT",
-        "msg": "\ndefined class CustomDegree\n\nweighted_degrees: org.apache.spark.graphx.VertexRDD[CustomDegree] \u003d VertexRDDImpl[471] at RDD at VertexRDD.scala:57\n"
+        "msg": "\ndefined class CustomDegree\n\nreadNodes_weighted_degrees: org.apache.spark.graphx.VertexRDD[CustomDegree] \u003d VertexRDDImpl[480] at RDD at VertexRDD.scala:57\n"
       },
       "dateCreated": "Nov 9, 2016 5:06:39 PM",
-      "dateStarted": "Nov 10, 2016 4:08:39 PM",
-      "dateFinished": "Nov 10, 2016 4:08:39 PM",
+      "dateStarted": "Nov 10, 2016 4:34:38 PM",
+      "dateFinished": "Nov 10, 2016 4:34:38 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%md\n\n**weighted_degrees** will look like this:\n\n    (4,CustomDegree(Map(8 -\u003e 3.583333333333333)))\n    (0,CustomDegree(Map(8 -\u003e 2.4499999999999997)))\n    (6,CustomDegree(Map(8 -\u003e 2.45)))\n    (2,CustomDegree(Map(8 -\u003e 3.583333333333333, 10 -\u003e 0.5)))\n    (1,CustomDegree(Map(8 -\u003e 3.283333333333333)))\n    (3,CustomDegree(Map(8 -\u003e 3.6666666666666665, 10 -\u003e 0.5)))\n\nSo we see that ReadNode 4 is mapped to ContigNode 8 with a confidence of 3.59 (unique match), whereas ReadNode 2 is mapped to ContigNode 8 with confidence 3.58 and to ContigNode 10 with confidence 0.5. ",
+      "text": "%md\n\n**readNodes_weighted_degrees** will look like this:\n\n    (4,CustomDegree(Map(8 -\u003e 3.583333333333333)))\n    (0,CustomDegree(Map(8 -\u003e 2.4499999999999997)))\n    (6,CustomDegree(Map(8 -\u003e 2.45)))\n    (2,CustomDegree(Map(8 -\u003e 3.583333333333333, 10 -\u003e 0.5)))\n    (1,CustomDegree(Map(8 -\u003e 3.283333333333333)))\n    (3,CustomDegree(Map(8 -\u003e 3.6666666666666665, 10 -\u003e 0.5)))\n\nSo we see that ReadNode 4 is mapped to ContigNode 8 with a confidence of 3.59 (unique match), whereas ReadNode 2 is mapped to ContigNode 8 with confidence 3.58 and to ContigNode 10 with confidence 0.5. ",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 4:16:18 PM",
+      "dateUpdated": "Nov 10, 2016 4:34:58 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -519,18 +519,18 @@
       "result": {
         "code": "SUCCESS",
         "type": "HTML",
-        "msg": "\u003cp\u003e\u003cstrong\u003eweighted_degrees\u003c/strong\u003e will look like this:\u003c/p\u003e\n\u003cpre\u003e\u003ccode\u003e(4,CustomDegree(Map(8 -\u0026gt; 3.583333333333333)))\n(0,CustomDegree(Map(8 -\u0026gt; 2.4499999999999997)))\n(6,CustomDegree(Map(8 -\u0026gt; 2.45)))\n(2,CustomDegree(Map(8 -\u0026gt; 3.583333333333333, 10 -\u0026gt; 0.5)))\n(1,CustomDegree(Map(8 -\u0026gt; 3.283333333333333)))\n(3,CustomDegree(Map(8 -\u0026gt; 3.6666666666666665, 10 -\u0026gt; 0.5)))\n\u003c/code\u003e\u003c/pre\u003e\n\u003cp\u003eSo we see that ReadNode 4 is mapped to ContigNode 8 with a confidence of 3.59 (unique match), whereas ReadNode 2 is mapped to ContigNode 8 with confidence 3.58 and to ContigNode 10 with confidence 0.5.\u003c/p\u003e\n"
+        "msg": "\u003cp\u003e\u003cstrong\u003ereadNodes_weighted_degrees\u003c/strong\u003e will look like this:\u003c/p\u003e\n\u003cpre\u003e\u003ccode\u003e(4,CustomDegree(Map(8 -\u0026gt; 3.583333333333333)))\n(0,CustomDegree(Map(8 -\u0026gt; 2.4499999999999997)))\n(6,CustomDegree(Map(8 -\u0026gt; 2.45)))\n(2,CustomDegree(Map(8 -\u0026gt; 3.583333333333333, 10 -\u0026gt; 0.5)))\n(1,CustomDegree(Map(8 -\u0026gt; 3.283333333333333)))\n(3,CustomDegree(Map(8 -\u0026gt; 3.6666666666666665, 10 -\u0026gt; 0.5)))\n\u003c/code\u003e\u003c/pre\u003e\n\u003cp\u003eSo we see that ReadNode 4 is mapped to ContigNode 8 with a confidence of 3.59 (unique match), whereas ReadNode 2 is mapped to ContigNode 8 with confidence 3.58 and to ContigNode 10 with confidence 0.5.\u003c/p\u003e\n"
       },
       "dateCreated": "Nov 10, 2016 2:01:28 PM",
-      "dateStarted": "Nov 10, 2016 4:16:18 PM",
-      "dateFinished": "Nov 10, 2016 4:16:18 PM",
+      "dateStarted": "Nov 10, 2016 4:34:58 PM",
+      "dateFinished": "Nov 10, 2016 4:34:58 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%spark\n\nweighted_degrees.collect().foreach(println(_))",
+      "text": "%spark\n\nreadNodes_weighted_degrees.collect().foreach(println(_))",
       "user": "admin",
-      "dateUpdated": "Nov 10, 2016 4:08:41 PM",
+      "dateUpdated": "Nov 10, 2016 4:36:48 PM",
       "config": {
         "colWidth": 12.0,
         "graph": {
@@ -543,7 +543,9 @@
           "scatter": {}
         },
         "enabled": true,
-        "editorMode": "ace/mode/scala"
+        "editorMode": "ace/mode/scala",
+        "editorHide": false,
+        "tableHide": false
       },
       "settings": {
         "params": {},
@@ -558,15 +560,30 @@
         "msg": "(4,CustomDegree(Map(8 -\u003e 3.583333333333333)))\n(0,CustomDegree(Map(8 -\u003e 2.4499999999999997)))\n(6,CustomDegree(Map(8 -\u003e 2.45)))\n(2,CustomDegree(Map(8 -\u003e 3.583333333333333, 10 -\u003e 0.5)))\n(1,CustomDegree(Map(8 -\u003e 3.283333333333333)))\n(3,CustomDegree(Map(8 -\u003e 3.6666666666666665, 10 -\u003e 0.5)))\n(5,CustomDegree(Map(8 -\u003e 3.283333333333333)))\n"
       },
       "dateCreated": "Nov 10, 2016 2:43:57 PM",
-      "dateStarted": "Nov 10, 2016 4:08:41 PM",
-      "dateFinished": "Nov 10, 2016 4:08:44 PM",
+      "dateStarted": "Nov 10, 2016 4:36:42 PM",
+      "dateFinished": "Nov 10, 2016 4:36:42 PM",
       "status": "FINISHED",
       "progressUpdateIntervalMs": 500
     },
     {
-      "text": "%md\n",
-      "dateUpdated": "Nov 10, 2016 4:14:43 PM",
-      "config": {},
+      "text": "%md\n\nCompute the in-degree of all ContigNodes",
+      "user": "admin",
+      "dateUpdated": "Nov 10, 2016 4:36:52 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorHide": true,
+        "tableHide": false
+      },
       "settings": {
         "params": {},
         "forms": {}
@@ -574,7 +591,100 @@
       "apps": [],
       "jobName": "paragraph_1478790883312_1884765051",
       "id": "20161110-161443_549539506",
+      "result": {
+        "code": "SUCCESS",
+        "type": "HTML",
+        "msg": "\u003cp\u003eCompute the in-degree of all ContigNodes\u003c/p\u003e\n"
+      },
       "dateCreated": "Nov 10, 2016 4:14:43 PM",
+      "dateStarted": "Nov 10, 2016 4:36:52 PM",
+      "dateFinished": "Nov 10, 2016 4:36:52 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%spark\n\nval contigNodes_degrees: VertexRDD[Long] \u003d graph.aggregateMessages[Long] (\n    triplet \u003d\u003e { // map function\n        if (triplet.attr.isInstanceOf[RCedge]) {\n            triplet.sendToDst(1)\n        }\n    },\n    (msg1, msg2) \u003d\u003e { //reduce function, takes 2 Longs\n        msg1 + msg2\n    },\n    TripletFields.EdgeOnly // pass only the edge attributes to the EdgeContext in the mapper\n)\n\n\n",
+      "user": "admin",
+      "dateUpdated": "Nov 10, 2016 4:39:21 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true,
+        "editorMode": "ace/mode/text"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478791887513_-1459666669",
+      "id": "20161110-163127_1494675202",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "\ncontigNodes_degrees: org.apache.spark.graphx.VertexRDD[Long] \u003d VertexRDDImpl[484] at RDD at VertexRDD.scala:57\n"
+      },
+      "dateCreated": "Nov 10, 2016 4:31:27 PM",
+      "dateStarted": "Nov 10, 2016 4:39:21 PM",
+      "dateFinished": "Nov 10, 2016 4:39:21 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%spark\ncontigNodes_degrees.collect().foreach(println(_))",
+      "user": "admin",
+      "dateUpdated": "Nov 10, 2016 4:39:42 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "enabled": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478791936113_108077829",
+      "id": "20161110-163216_1508575297",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "(8,7)\n(10,2)\n(7,1)\n(9,1)\n"
+      },
+      "dateCreated": "Nov 10, 2016 4:32:16 PM",
+      "dateStarted": "Nov 10, 2016 4:39:42 PM",
+      "dateFinished": "Nov 10, 2016 4:39:42 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%spark\n",
+      "dateUpdated": "Nov 10, 2016 4:39:29 PM",
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1478792369126_-1779131971",
+      "id": "20161110-163929_1815055100",
+      "dateCreated": "Nov 10, 2016 4:39:29 PM",
       "status": "READY",
       "progressUpdateIntervalMs": 500
     }
